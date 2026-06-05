@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Geo Control Room: quiz geografico su mappa satellitare con punteggio e penalita di navigazione.">
+  <meta property="og:title" content="Geo Control Room">
+  <meta property="og:description" content="Indovina luoghi nel mondo usando una mappa satellitare. Meno navighi, piu punti ottieni.">
+  <meta property="og:type" content="website">
+  <title>Geo Control Room</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell" aria-label="Geo Control Room">
+    <section class="map-panel" aria-label="Mappa satellitare navigabile" data-i18n-aria-label="mapAria">
+      <div id="tileLayer" class="tile-layer" aria-hidden="true"></div>
+      <div class="map-vignette" aria-hidden="true"></div>
+      <span class="marker" aria-hidden="true"></span>
+      <div id="scale" class="scale">50 km</div>
+      <div class="map-help" data-i18n="mapHelp">Pan: trascina | Zoom: rotellina</div>
+      <div class="attribution">Tiles: Esri World Imagery</div>
+    </section>
+
+    <aside class="side-panel">
+      <div class="status-bar">
+        <span class="status-led" data-i18n="systemOnline">Sistema online</span>
+        <span id="roundStatus">Target --/--</span>
+      </div>
+
+      <header>
+        <div class="topline">Geo control room</div>
+        <h1 data-i18n="title">Dove si trova il target?</h1>
+      </header>
+
+      <label class="language-control" for="languageSelect">
+        <span data-i18n="languageLabel">Lingua</span>
+        <select id="languageSelect" aria-label="Seleziona lingua" data-i18n-aria-label="languageAria">
+          <option value="it">🇮🇹 Italiano</option>
+          <option value="en">🇬🇧 English</option>
+          <option value="es">🇪🇸 Español</option>
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="zh">🇨🇳 中文</option>
+          <option value="ru">🇷🇺 Русский</option>
+        </select>
+      </label>
+
+      <p class="intro" data-i18n="intro">Analizza la mappa, scegli una risposta e conferma. Ogni pan o zoom prima della risposta riduce il punteggio del target del 10%.</p>
+
+      <section class="score-grid" aria-label="Punteggio" data-i18n-aria-label="scoreAria">
+        <div class="metric">
+          <span data-i18n="metricAnswers">Risposte</span>
+          <strong id="scoreTotal">0</strong>
+        </div>
+        <div class="metric">
+          <span data-i18n="metricCorrect">Corrette</span>
+          <strong id="scoreCorrect">0</strong>
+        </div>
+        <div class="metric">
+          <span data-i18n="metricAccuracy">Precisione</span>
+          <strong id="scoreRate">0%</strong>
+        </div>
+        <div class="metric">
+          <span data-i18n="metricPoints">Punti</span>
+          <strong id="scorePoints">0</strong>
+        </div>
+        <div class="metric">
+          <span data-i18n="metricPenalty">Penalita</span>
+          <strong id="scorePenalty">0%</strong>
+        </div>
+        <div class="metric">
+          <span data-i18n="metricStreak">Serie</span>
+          <strong id="scoreStreak">0</strong>
+        </div>
+      </section>
+
+      <form id="quizForm">
+        <fieldset>
+          <legend data-i18n="chooseSolution">Scegli una soluzione</legend>
+          <div id="choices"></div>
+        </fieldset>
+
+        <div class="actions">
+          <button id="checkButton" type="submit" disabled data-i18n="verify">Verifica</button>
+          <button id="nextTargetButton" class="secondary" type="button" disabled data-i18n="next">Prossimo</button>
+          <button id="resetGameButton" class="secondary" type="button" data-i18n="restart">Ricomincia</button>
+        </div>
+      </form>
+
+      <div id="result" class="result" role="status" aria-live="polite">
+        <strong data-i18n="waitingTitle">Target in attesa</strong>
+        <span data-i18n="waitingText">Scegli una delle tre opzioni per continuare.</span>
+      </div>
+
+      <footer class="meta">
+        <span id="meta">Luoghi globali casuali, senza ripetizioni nella sessione.</span>
+        <a href="https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer" target="_blank" rel="noreferrer">World Imagery MapServer</a>
+      </footer>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
