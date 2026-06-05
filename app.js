@@ -6,6 +6,7 @@ const choices = document.querySelector("#choices");
 const result = document.querySelector("#result");
 const mapPanel = document.querySelector(".map-panel");
 const tileLayer = document.querySelector("#tileLayer");
+const answerBurst = document.querySelector("#answerBurst");
 const marker = document.querySelector(".marker");
 const scale = document.querySelector("#scale");
 const meta = document.querySelector("#meta");
@@ -627,6 +628,12 @@ function lockChoices() {
   });
 }
 
+function playAnswerAnimation(isCorrect) {
+  answerBurst.classList.remove("is-victory", "is-sad");
+  void answerBurst.offsetWidth;
+  answerBurst.classList.add(isCorrect ? "is-victory" : "is-sad");
+}
+
 function renderCompletion() {
   const rate = score.total === 0 ? 0 : Math.round(score.correct / score.total * 100);
 
@@ -701,6 +708,7 @@ form.addEventListener("submit", (event) => {
   score.points += placePoints;
   renderScore();
   lockChoices();
+  playAnswerAnimation(isCorrect);
 
   checkButton.disabled = true;
   nextTargetButton.disabled = false;
