@@ -381,6 +381,7 @@ let currentOptions = [];
 let mapCenter = { ...places[0].center };
 let panState = null;
 let pinchState = null;
+let touchPinchState = null;
 const activePointers = new Map();
 let questionAnswered = false;
 let navigationActions = 0;
@@ -665,11 +666,46 @@ function updatePinch() {
   const [first, second] = getPointerPair();
   const distance = Math.max(1, getDistance(first, second));
   const midpoint = getMidpoint(first, second);
-  const zoomDelta = Math.round(Math.log2(distance / pinchState.startDistance));
+  const zoomDelta = Math.round(Math.log2(distance / pinchState.startDistance) * 2);
   const didZoom = zoomTo(pinchState.startZoom + zoomDelta, midpoint.clientX, midpoint.clientY);
 
   if (didZoom && !pinchState.penaltyApplied) {
     pinchState.penaltyApplied = true;
+    applyNavigationPenalty();
+  }
+}
+
+function beginTouchPinch(event) {
+  const [first, second] = event.touches;
+
+  if (!first || !second) {
+    return;
+  }
+
+  touchPinchState = {
+    startDistance: Math.max(1, getDistance(first, second)),
+    startZoom: mapCenter.zoom,
+    penaltyApplied: false
+  };
+  panState = null;
+  pinchState = null;
+  activePointers.clear();
+  mapPanel.classList.remove("is-panning");
+}
+
+function updateTouchPinch(event) {
+  if (!touchPinchState || event.touches.length < 2) {
+    return;
+  }
+
+  const [first, second] = event.touches;
+  const distance = Math.max(1, getDistance(first, second));
+  const midpoint = getMidpoint(first, second);
+  const zoomDelta = Math.round(Math.log2(distance / touchPinchState.startDistance) * 2);
+  const didZoom = zoomTo(touchPinchState.startZoom + zoomDelta, midpoint.clientX, midpoint.clientY);
+
+  if (didZoom && !touchPinchState.penaltyApplied) {
+    touchPinchState.penaltyApplied = true;
     applyNavigationPenalty();
   }
 }
@@ -973,6 +1009,34 @@ function endPan(event) {
 mapPanel.addEventListener("pointerup", endPan);
 mapPanel.addEventListener("pointercancel", endPan);
 mapPanel.addEventListener("pointerleave", endPan);
+
+mapPanel.addEventListener("touchstart", (event) => {
+  if (!currentPlace || event.touches.length < 2) {
+    return;
+  }
+
+  event.preventDefault();
+  beginTouchPinch(event);
+}, { passive: false });
+
+mapPanel.addEventListener("touchmove", (event) => {
+  if (!touchPinchState || event.touches.length < 2) {
+    return;
+  }
+
+  event.preventDefault();
+  updateTouchPinch(event);
+}, { passive: false });
+
+mapPanel.addEventListener("touchend", (event) => {
+  if (event.touches.length < 2) {
+    touchPinchState = null;
+  }
+}, { passive: false });
+
+mapPanel.addEventListener("touchcancel", () => {
+  touchPinchState = null;
+}, { passive: false });
 
 mapPanel.addEventListener("wheel", (event) => {
   if (!currentPlace) {
