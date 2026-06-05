@@ -60,33 +60,6 @@ input {
   cursor: grabbing;
 }
 
-.map-panel.feedback-victory::after,
-.map-panel.feedback-sad::after {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  z-index: 6;
-  pointer-events: none;
-  font-size: clamp(76px, 12vw, 150px);
-  font-weight: 900;
-  text-shadow: 0 0 28px currentColor;
-}
-
-.map-panel.feedback-victory::after {
-  content: "✓";
-  color: var(--good);
-  background: radial-gradient(circle, rgba(66, 224, 143, 0.24), rgba(66, 224, 143, 0.04) 36%, transparent 68%);
-  animation: mapVictoryFlash 1100ms ease-out both;
-}
-
-.map-panel.feedback-sad::after {
-  content: "×";
-  color: var(--bad);
-  background: radial-gradient(circle, rgba(255, 93, 93, 0.24), rgba(255, 93, 93, 0.05) 38%, transparent 70%);
-  animation: mapSadFlash 1150ms ease-out both;
-}
-
 .tile-layer {
   position: absolute;
   inset: 0;
@@ -139,14 +112,14 @@ input {
 }
 
 .answer-burst {
-  position: absolute;
+  position: fixed;
   left: 50%;
   top: 50%;
-  width: 150px;
-  height: 150px;
+  width: min(260px, 58vw);
+  height: min(260px, 58vw);
   transform: translate(-50%, -50%);
   pointer-events: none;
-  z-index: 7;
+  z-index: 50;
   opacity: 0;
 }
 
@@ -161,10 +134,10 @@ input {
 .burst-icon::before {
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
+  width: min(124px, 28vw);
+  height: min(124px, 28vw);
   border-radius: 50%;
-  font-size: 34px;
+  font-size: clamp(56px, 14vw, 96px);
   font-weight: 900;
   line-height: 1;
 }
@@ -179,6 +152,20 @@ input {
 
 .answer-burst.is-victory {
   animation: burstVisibility 1100ms ease-out both;
+}
+
+.answer-burst.is-victory::before,
+.answer-burst.is-sad::before {
+  content: "";
+  position: fixed;
+  inset: -100vmax;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.answer-burst.is-victory::before {
+  background: radial-gradient(circle, rgba(66, 224, 143, 0.28), rgba(66, 224, 143, 0.08) 18%, transparent 42%);
+  animation: viewportVictoryFlash 1100ms ease-out both;
 }
 
 .answer-burst.is-victory .burst-icon::before {
@@ -201,6 +188,11 @@ input {
 
 .answer-burst.is-sad {
   animation: burstVisibility 1150ms ease-out both;
+}
+
+.answer-burst.is-sad::before {
+  background: radial-gradient(circle, rgba(255, 93, 93, 0.3), rgba(255, 93, 93, 0.08) 18%, transparent 44%);
+  animation: viewportSadFlash 1150ms ease-out both;
 }
 
 .answer-burst.is-sad .burst-icon::before {
@@ -231,14 +223,14 @@ input {
   100% { opacity: 0; }
 }
 
-@keyframes mapVictoryFlash {
+@keyframes viewportVictoryFlash {
   0% { opacity: 0; transform: scale(0.92); }
   14% { opacity: 1; transform: scale(1); }
   60% { opacity: 0.84; transform: scale(1.04); }
   100% { opacity: 0; transform: scale(1.12); }
 }
 
-@keyframes mapSadFlash {
+@keyframes viewportSadFlash {
   0% { opacity: 0; transform: translateY(-12px) scale(0.96); }
   18% { opacity: 1; transform: translateY(0) scale(1); }
   42% { opacity: 0.9; transform: translateY(8px) scale(0.98); }

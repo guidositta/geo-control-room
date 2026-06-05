@@ -392,6 +392,7 @@ let score = {
 let currentLanguage = "it";
 let lastResultState = "waiting";
 let lastResultPayload = {};
+let audioContext = null;
 
 function t(key, ...args) {
   const value = translations[currentLanguage][key] || translations.it[key];
@@ -628,15 +629,77 @@ function lockChoices() {
   });
 }
 
+function getAudioContext() {
+  const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContextConstructor) {
+    return null;
+  }
+
+  if (!audioContext) {
+    audioContext = new AudioContextConstructor();
+  }
+
+  return audioContext;
+}
+
+function playTone(frequency, startTime, duration, type, volume = 0.08) {
+  const context = getAudioContext();
+
+  if (!context) {
+    return;
+  }
+
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, startTime);
+  gain.gain.setValueAtTime(0.0001, startTime);
+  gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.018);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(startTime);
+  oscillator.stop(startTime + duration + 0.03);
+}
+
+function playAnswerSound(isCorrect) {
+  const context = getAudioContext();
+
+  if (!context) {
+    return;
+  }
+
+  if (context.state === "suspended") {
+    context.resume();
+  }
+
+  const now = context.currentTime;
+
+  if (isCorrect) {
+    playTone(523.25, now, 0.12, "sine", 0.07);
+    playTone(659.25, now + 0.11, 0.13, "sine", 0.075);
+    playTone(783.99, now + 0.23, 0.18, "triangle", 0.08);
+  } else {
+    playTone(220, now, 0.16, "sawtooth", 0.055);
+    playTone(164.81, now + 0.14, 0.22, "triangle", 0.06);
+  }
+}
+
+function vibrateOnError() {
+  if ("vibrate" in navigator) {
+    navigator.vibrate([120, 50, 160]);
+  }
+}
+
 function playAnswerAnimation(isCorrect) {
-  mapPanel.classList.remove("feedback-victory", "feedback-sad");
   answerBurst.classList.remove("is-victory", "is-sad");
-  void mapPanel.offsetWidth;
+  void answerBurst.offsetWidth;
   answerBurst.classList.add(isCorrect ? "is-victory" : "is-sad");
-  mapPanel.classList.add(isCorrect ? "feedback-victory" : "feedback-sad");
 
   window.setTimeout(() => {
-    mapPanel.classList.remove("feedback-victory", "feedback-sad");
     answerBurst.classList.remove("is-victory", "is-sad");
   }, 1300);
 }
@@ -716,6 +779,11 @@ form.addEventListener("submit", (event) => {
   renderScore();
   lockChoices();
   playAnswerAnimation(isCorrect);
+  playAnswerSound(isCorrect);
+
+  if (!isCorrect) {
+    vibrateOnError();
+  }
 
   checkButton.disabled = true;
   nextTargetButton.disabled = false;
