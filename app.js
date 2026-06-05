@@ -26,7 +26,7 @@ const translations = {
   it: {
     htmlLang: "it",
     mapAria: "Mappa satellitare navigabile",
-    mapHelp: "Pan: trascina | Zoom: rotellina",
+    mapHelp: "Pan: trascina | Zoom: rotellina o due dita",
     systemOnline: "Sistema online",
     languageLabel: "Lingua",
     languageAria: "Seleziona lingua",
@@ -60,7 +60,7 @@ const translations = {
   en: {
     htmlLang: "en",
     mapAria: "Navigable satellite map",
-    mapHelp: "Pan: drag | Zoom: mouse wheel",
+    mapHelp: "Pan: drag | Zoom: wheel or pinch",
     systemOnline: "System online",
     languageLabel: "Language",
     languageAria: "Select language",
@@ -94,7 +94,7 @@ const translations = {
   es: {
     htmlLang: "es",
     mapAria: "Mapa satelital navegable",
-    mapHelp: "Pan: arrastrar | Zoom: rueda",
+    mapHelp: "Pan: arrastrar | Zoom: rueda o pellizco",
     systemOnline: "Sistema en linea",
     languageLabel: "Idioma",
     languageAria: "Seleccionar idioma",
@@ -128,7 +128,7 @@ const translations = {
   de: {
     htmlLang: "de",
     mapAria: "Navigierbare Satellitenkarte",
-    mapHelp: "Pan: ziehen | Zoom: Mausrad",
+    mapHelp: "Pan: ziehen | Zoom: Mausrad oder Pinch",
     systemOnline: "System online",
     languageLabel: "Sprache",
     languageAria: "Sprache auswahlen",
@@ -162,7 +162,7 @@ const translations = {
   fr: {
     htmlLang: "fr",
     mapAria: "Carte satellite navigable",
-    mapHelp: "Pan: glisser | Zoom: molette",
+    mapHelp: "Pan: glisser | Zoom: molette ou pincement",
     systemOnline: "Systeme en ligne",
     languageLabel: "Langue",
     languageAria: "Choisir la langue",
@@ -196,7 +196,7 @@ const translations = {
   zh: {
     htmlLang: "zh",
     mapAria: "可导航卫星地图",
-    mapHelp: "平移：拖动 | 缩放：滚轮",
+    mapHelp: "平移：拖动 | 缩放：滚轮或双指",
     systemOnline: "系统在线",
     languageLabel: "语言",
     languageAria: "选择语言",
@@ -230,7 +230,7 @@ const translations = {
   ru: {
     htmlLang: "ru",
     mapAria: "Навигационная спутниковая карта",
-    mapHelp: "Панорама: перетащите | Масштаб: колесо мыши",
+    mapHelp: "Панорама: перетащите | Масштаб: колесо или жест",
     systemOnline: "Система онлайн",
     languageLabel: "Язык",
     languageAria: "Выберите язык",
@@ -380,6 +380,8 @@ let currentPlace = null;
 let currentOptions = [];
 let mapCenter = { ...places[0].center };
 let panState = null;
+let pinchState = null;
+const activePointers = new Map();
 let questionAnswered = false;
 let navigationActions = 0;
 let selectedAnswer = "";
@@ -590,8 +592,8 @@ function renderTiles() {
   updateMarkerPosition();
 }
 
-function zoomMap(delta, clientX, clientY) {
-  const nextZoom = Math.max(minZoom, Math.min(maxZoom, mapCenter.zoom + delta));
+function zoomTo(nextZoom, clientX, clientY) {
+  nextZoom = Math.max(minZoom, Math.min(maxZoom, nextZoom));
 
   if (nextZoom === mapCenter.zoom) {
     return false;
@@ -618,6 +620,58 @@ function zoomMap(delta, clientX, clientY) {
 
   renderTiles();
   return true;
+}
+
+function zoomMap(delta, clientX, clientY) {
+  return zoomTo(mapCenter.zoom + delta, clientX, clientY);
+}
+
+function getPointerPair() {
+  return [...activePointers.values()].slice(0, 2);
+}
+
+function getDistance(first, second) {
+  return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+}
+
+function getMidpoint(first, second) {
+  return {
+    clientX: (first.clientX + second.clientX) / 2,
+    clientY: (first.clientY + second.clientY) / 2
+  };
+}
+
+function beginPinch() {
+  const [first, second] = getPointerPair();
+
+  if (!first || !second) {
+    return;
+  }
+
+  pinchState = {
+    startDistance: Math.max(1, getDistance(first, second)),
+    startZoom: mapCenter.zoom,
+    penaltyApplied: false
+  };
+  panState = null;
+  mapPanel.classList.remove("is-panning");
+}
+
+function updatePinch() {
+  if (!pinchState || activePointers.size < 2) {
+    return;
+  }
+
+  const [first, second] = getPointerPair();
+  const distance = Math.max(1, getDistance(first, second));
+  const midpoint = getMidpoint(first, second);
+  const zoomDelta = Math.round(Math.log2(distance / pinchState.startDistance));
+  const didZoom = zoomTo(pinchState.startZoom + zoomDelta, midpoint.clientX, midpoint.clientY);
+
+  if (didZoom && !pinchState.penaltyApplied) {
+    pinchState.penaltyApplied = true;
+    applyNavigationPenalty();
+  }
 }
 
 function lockChoices() {
@@ -823,6 +877,16 @@ mapPanel.addEventListener("pointerdown", (event) => {
 
   event.preventDefault();
   mapPanel.setPointerCapture(event.pointerId);
+  activePointers.set(event.pointerId, {
+    clientX: event.clientX,
+    clientY: event.clientY
+  });
+
+  if (activePointers.size >= 2) {
+    beginPinch();
+    return;
+  }
+
   mapPanel.classList.add("is-panning");
   panState = {
     pointerId: event.pointerId,
@@ -835,6 +899,19 @@ mapPanel.addEventListener("pointerdown", (event) => {
 });
 
 mapPanel.addEventListener("pointermove", (event) => {
+  if (activePointers.has(event.pointerId)) {
+    activePointers.set(event.pointerId, {
+      clientX: event.clientX,
+      clientY: event.clientY
+    });
+  }
+
+  if (pinchState && activePointers.size >= 2) {
+    event.preventDefault();
+    updatePinch();
+    return;
+  }
+
   if (!panState || panState.pointerId !== event.pointerId) {
     return;
   }
@@ -862,16 +939,40 @@ mapPanel.addEventListener("pointermove", (event) => {
 });
 
 function endPan(event) {
-  if (!panState || panState.pointerId !== event.pointerId) {
+  activePointers.delete(event.pointerId);
+
+  if (pinchState) {
+    pinchState = null;
+
+    if (activePointers.size === 1) {
+      const [remainingPointerId, remainingPointer] = [...activePointers.entries()][0];
+      mapPanel.classList.add("is-panning");
+      panState = {
+        pointerId: remainingPointerId,
+        startX: remainingPointer.clientX,
+        startY: remainingPointer.clientY,
+        penaltyApplied: false,
+        centerPixelX: lonToTileX(mapCenter.lon, mapCenter.zoom) * 256,
+        centerPixelY: latToTileY(mapCenter.lat, mapCenter.zoom) * 256
+      };
+    }
+
     return;
   }
 
-  panState = null;
-  mapPanel.classList.remove("is-panning");
+  if (panState && panState.pointerId === event.pointerId) {
+    panState = null;
+    mapPanel.classList.remove("is-panning");
+  }
+
+  if (activePointers.size === 0) {
+    mapPanel.classList.remove("is-panning");
+  }
 }
 
 mapPanel.addEventListener("pointerup", endPan);
 mapPanel.addEventListener("pointercancel", endPan);
+mapPanel.addEventListener("pointerleave", endPan);
 
 mapPanel.addEventListener("wheel", (event) => {
   if (!currentPlace) {
