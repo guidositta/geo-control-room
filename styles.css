@@ -111,6 +111,39 @@ input {
   top: 5px;
 }
 
+.device-marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #081012;
+  box-shadow: 0 0 0 5px rgba(56, 215, 190, 0.25), 0 0 22px rgba(56, 215, 190, 0.85);
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  display: none;
+}
+
+.device-marker.is-visible {
+  display: block;
+}
+
+.device-marker::after {
+  content: "";
+  position: absolute;
+  inset: -13px;
+  border: 2px solid rgba(56, 215, 190, 0.42);
+  border-radius: 50%;
+  animation: devicePulse 1500ms ease-out infinite;
+}
+
+@keyframes devicePulse {
+  0% { opacity: 0.9; transform: scale(0.55); }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+
 .answer-burst {
   position: fixed;
   left: 50%;

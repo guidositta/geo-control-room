@@ -8,6 +8,7 @@ const mapPanel = document.querySelector(".map-panel");
 const tileLayer = document.querySelector("#tileLayer");
 const answerBurst = document.querySelector("#answerBurst");
 const marker = document.querySelector(".marker");
+const deviceMarker = document.querySelector("#deviceMarker");
 const locateButton = document.querySelector("#locateButton");
 const scale = document.querySelector("#scale");
 const meta = document.querySelector("#meta");
@@ -422,6 +423,7 @@ const activePointers = new Map();
 let questionAnswered = false;
 let navigationActions = 0;
 let selectedAnswer = "";
+let deviceLocation = null;
 let score = {
   total: 0,
   correct: 0,
@@ -593,6 +595,24 @@ function updateMarkerPosition() {
   marker.style.top = `${mapHeight / 2 + placeY - centerY}px`;
 }
 
+function updateDeviceMarkerPosition() {
+  if (!deviceLocation) {
+    deviceMarker.classList.remove("is-visible");
+    return;
+  }
+
+  const mapWidth = mapPanel.clientWidth;
+  const mapHeight = mapPanel.clientHeight;
+  const centerX = lonToTileX(mapCenter.lon, mapCenter.zoom) * 256;
+  const centerY = latToTileY(mapCenter.lat, mapCenter.zoom) * 256;
+  const deviceX = lonToTileX(deviceLocation.lon, mapCenter.zoom) * 256;
+  const deviceY = latToTileY(deviceLocation.lat, mapCenter.zoom) * 256;
+
+  deviceMarker.style.left = `${mapWidth / 2 + deviceX - centerX}px`;
+  deviceMarker.style.top = `${mapHeight / 2 + deviceY - centerY}px`;
+  deviceMarker.classList.add("is-visible");
+}
+
 function renderTiles() {
   if (!currentPlace) {
     return;
@@ -630,6 +650,7 @@ function renderTiles() {
 
   tileLayer.appendChild(fragment);
   updateMarkerPosition();
+  updateDeviceMarkerPosition();
 }
 
 function zoomTo(nextZoom, clientX, clientY) {
@@ -764,9 +785,14 @@ function centerOnDeviceLocation() {
 
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      mapCenter = {
+      deviceLocation = {
         lat: position.coords.latitude,
-        lon: position.coords.longitude,
+        lon: position.coords.longitude
+      };
+
+      mapCenter = {
+        lat: deviceLocation.lat,
+        lon: deviceLocation.lon,
         zoom: Math.max(mapCenter.zoom, 12)
       };
 
@@ -972,6 +998,12 @@ nextTargetButton.addEventListener("click", () => {
 
 resetGameButton.addEventListener("click", () => {
   resetGame();
+});
+
+["pointerdown", "pointermove", "pointerup", "touchstart", "touchmove", "click"].forEach((eventName) => {
+  locateButton.addEventListener(eventName, (event) => {
+    event.stopPropagation();
+  }, { passive: false });
 });
 
 locateButton.addEventListener("click", () => {
