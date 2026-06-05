@@ -8,6 +8,7 @@ const mapPanel = document.querySelector(".map-panel");
 const tileLayer = document.querySelector("#tileLayer");
 const answerBurst = document.querySelector("#answerBurst");
 const marker = document.querySelector(".marker");
+const locateButton = document.querySelector("#locateButton");
 const scale = document.querySelector("#scale");
 const meta = document.querySelector("#meta");
 const roundStatus = document.querySelector("#roundStatus");
@@ -27,6 +28,11 @@ const translations = {
     htmlLang: "it",
     mapAria: "Mappa satellitare navigabile",
     mapHelp: "Pan: trascina | Zoom: rotellina o due dita",
+    locateAria: "Centra sulla mia posizione",
+    locatingTitle: "Localizzazione in corso",
+    locatingText: "Sto cercando la posizione del dispositivo.",
+    locateErrorTitle: "Posizione non disponibile",
+    locateErrorText: "Non riesco a leggere la posizione del dispositivo. Controlla i permessi del browser.",
     systemOnline: "Sistema online",
     languageLabel: "Lingua",
     languageAria: "Seleziona lingua",
@@ -61,6 +67,11 @@ const translations = {
     htmlLang: "en",
     mapAria: "Navigable satellite map",
     mapHelp: "Pan: drag | Zoom: wheel or pinch",
+    locateAria: "Center on my location",
+    locatingTitle: "Locating device",
+    locatingText: "Looking for the device position.",
+    locateErrorTitle: "Location unavailable",
+    locateErrorText: "I cannot read the device location. Check browser permissions.",
     systemOnline: "System online",
     languageLabel: "Language",
     languageAria: "Select language",
@@ -95,6 +106,11 @@ const translations = {
     htmlLang: "es",
     mapAria: "Mapa satelital navegable",
     mapHelp: "Pan: arrastrar | Zoom: rueda o pellizco",
+    locateAria: "Centrar en mi ubicacion",
+    locatingTitle: "Buscando ubicacion",
+    locatingText: "Estoy buscando la posicion del dispositivo.",
+    locateErrorTitle: "Ubicacion no disponible",
+    locateErrorText: "No puedo leer la ubicacion del dispositivo. Revisa los permisos del navegador.",
     systemOnline: "Sistema en linea",
     languageLabel: "Idioma",
     languageAria: "Seleccionar idioma",
@@ -129,6 +145,11 @@ const translations = {
     htmlLang: "de",
     mapAria: "Navigierbare Satellitenkarte",
     mapHelp: "Pan: ziehen | Zoom: Mausrad oder Pinch",
+    locateAria: "Auf meinen Standort zentrieren",
+    locatingTitle: "Standort wird gesucht",
+    locatingText: "Die Position des Gerats wird gesucht.",
+    locateErrorTitle: "Standort nicht verfugbar",
+    locateErrorText: "Der Standort des Gerats kann nicht gelesen werden. Prufe die Browser-Berechtigungen.",
     systemOnline: "System online",
     languageLabel: "Sprache",
     languageAria: "Sprache auswahlen",
@@ -163,6 +184,11 @@ const translations = {
     htmlLang: "fr",
     mapAria: "Carte satellite navigable",
     mapHelp: "Pan: glisser | Zoom: molette ou pincement",
+    locateAria: "Centrer sur ma position",
+    locatingTitle: "Localisation en cours",
+    locatingText: "Recherche de la position de l'appareil.",
+    locateErrorTitle: "Position indisponible",
+    locateErrorText: "Impossible de lire la position de l'appareil. Verifiez les autorisations du navigateur.",
     systemOnline: "Systeme en ligne",
     languageLabel: "Langue",
     languageAria: "Choisir la langue",
@@ -197,6 +223,11 @@ const translations = {
     htmlLang: "zh",
     mapAria: "可导航卫星地图",
     mapHelp: "平移：拖动 | 缩放：滚轮或双指",
+    locateAria: "居中到我的位置",
+    locatingTitle: "正在定位",
+    locatingText: "正在查找设备位置。",
+    locateErrorTitle: "位置不可用",
+    locateErrorText: "无法读取设备位置。请检查浏览器权限。",
     systemOnline: "系统在线",
     languageLabel: "语言",
     languageAria: "选择语言",
@@ -231,6 +262,11 @@ const translations = {
     htmlLang: "ru",
     mapAria: "Навигационная спутниковая карта",
     mapHelp: "Панорама: перетащите | Масштаб: колесо или жест",
+    locateAria: "Центрировать по моему местоположению",
+    locatingTitle: "Поиск местоположения",
+    locatingText: "Ищу положение устройства.",
+    locateErrorTitle: "Местоположение недоступно",
+    locateErrorText: "Не удается прочитать местоположение устройства. Проверьте разрешения браузера.",
     systemOnline: "Система онлайн",
     languageLabel: "Язык",
     languageAria: "Выберите язык",
@@ -437,6 +473,9 @@ function applyTranslations() {
   });
   document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
     element.setAttribute("aria-label", t(element.dataset.i18nAriaLabel));
+  });
+  document.querySelectorAll("[data-i18n-title]").forEach((element) => {
+    element.setAttribute("title", t(element.dataset.i18nTitle));
   });
 
   if (lastResultPayload.titleKey) {
@@ -710,6 +749,44 @@ function updateTouchPinch(event) {
   }
 }
 
+function centerOnDeviceLocation() {
+  if (!currentPlace) {
+    return;
+  }
+
+  if (!("geolocation" in navigator)) {
+    setResult("locateErrorTitle", "locateErrorText", { args: [] }, "wrong");
+    return;
+  }
+
+  locateButton.disabled = true;
+  setResult("locatingTitle", "locatingText", { args: [] }, "waiting");
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      mapCenter = {
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+        zoom: Math.max(mapCenter.zoom, 12)
+      };
+
+      renderTiles();
+      applyNavigationPenalty();
+      locateButton.disabled = false;
+      setResult("waitingTitle", "waitingText", { args: [] }, "waiting");
+    },
+    () => {
+      locateButton.disabled = false;
+      setResult("locateErrorTitle", "locateErrorText", { args: [] }, "wrong");
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 60000
+    }
+  );
+}
+
 function lockChoices() {
   choices.querySelectorAll("input").forEach((input) => {
     input.disabled = true;
@@ -895,6 +972,10 @@ nextTargetButton.addEventListener("click", () => {
 
 resetGameButton.addEventListener("click", () => {
   resetGame();
+});
+
+locateButton.addEventListener("click", () => {
+  centerOnDeviceLocation();
 });
 
 languageSelect.addEventListener("change", () => {

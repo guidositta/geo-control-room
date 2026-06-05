@@ -305,6 +305,37 @@ input {
   border-radius: 6px;
 }
 
+.map-control {
+  position: absolute;
+  z-index: 5;
+  width: 46px;
+  height: 46px;
+  min-height: 46px;
+  border: 1px solid rgba(56, 215, 190, 0.38);
+  border-radius: 8px;
+  background: rgba(8, 13, 16, 0.76);
+  color: var(--accent);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(3px);
+  font-size: 25px;
+  line-height: 1;
+  padding: 0;
+  touch-action: manipulation;
+}
+
+.map-control:hover {
+  background: rgba(56, 215, 190, 0.12);
+}
+
+.map-control:disabled {
+  opacity: 0.62;
+}
+
+.locate-control {
+  right: 16px;
+  top: 16px;
+}
+
 .attribution {
   right: 12px;
   bottom: 12px;
@@ -599,5 +630,10 @@ button:disabled {
     max-width: calc(100% - 24px);
     right: 12px;
     bottom: 70px;
+  }
+
+  .locate-control {
+    right: 12px;
+    top: 12px;
   }
 }
