@@ -629,9 +629,16 @@ function lockChoices() {
 }
 
 function playAnswerAnimation(isCorrect) {
+  mapPanel.classList.remove("feedback-victory", "feedback-sad");
   answerBurst.classList.remove("is-victory", "is-sad");
-  void answerBurst.offsetWidth;
+  void mapPanel.offsetWidth;
   answerBurst.classList.add(isCorrect ? "is-victory" : "is-sad");
+  mapPanel.classList.add(isCorrect ? "feedback-victory" : "feedback-sad");
+
+  window.setTimeout(() => {
+    mapPanel.classList.remove("feedback-victory", "feedback-sad");
+    answerBurst.classList.remove("is-victory", "is-sad");
+  }, 1300);
 }
 
 function renderCompletion() {

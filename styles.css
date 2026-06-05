@@ -60,6 +60,33 @@ input {
   cursor: grabbing;
 }
 
+.map-panel.feedback-victory::after,
+.map-panel.feedback-sad::after {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 6;
+  pointer-events: none;
+  font-size: clamp(76px, 12vw, 150px);
+  font-weight: 900;
+  text-shadow: 0 0 28px currentColor;
+}
+
+.map-panel.feedback-victory::after {
+  content: "✓";
+  color: var(--good);
+  background: radial-gradient(circle, rgba(66, 224, 143, 0.24), rgba(66, 224, 143, 0.04) 36%, transparent 68%);
+  animation: mapVictoryFlash 1100ms ease-out both;
+}
+
+.map-panel.feedback-sad::after {
+  content: "×";
+  color: var(--bad);
+  background: radial-gradient(circle, rgba(255, 93, 93, 0.24), rgba(255, 93, 93, 0.05) 38%, transparent 70%);
+  animation: mapSadFlash 1150ms ease-out both;
+}
+
 .tile-layer {
   position: absolute;
   inset: 0;
@@ -119,7 +146,7 @@ input {
   height: 150px;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  z-index: 5;
+  z-index: 7;
   opacity: 0;
 }
 
@@ -155,7 +182,7 @@ input {
 }
 
 .answer-burst.is-victory .burst-icon::before {
-  content: "+";
+  content: "✓";
   color: #06100e;
   background: var(--good);
   box-shadow: 0 0 28px rgba(66, 224, 143, 0.9);
@@ -177,7 +204,7 @@ input {
 }
 
 .answer-burst.is-sad .burst-icon::before {
-  content: "!";
+  content: "×";
   color: #160708;
   background: var(--bad);
   box-shadow: 0 0 26px rgba(255, 93, 93, 0.82);
@@ -202,6 +229,20 @@ input {
   12% { opacity: 1; }
   78% { opacity: 1; }
   100% { opacity: 0; }
+}
+
+@keyframes mapVictoryFlash {
+  0% { opacity: 0; transform: scale(0.92); }
+  14% { opacity: 1; transform: scale(1); }
+  60% { opacity: 0.84; transform: scale(1.04); }
+  100% { opacity: 0; transform: scale(1.12); }
+}
+
+@keyframes mapSadFlash {
+  0% { opacity: 0; transform: translateY(-12px) scale(0.96); }
+  18% { opacity: 1; transform: translateY(0) scale(1); }
+  42% { opacity: 0.9; transform: translateY(8px) scale(0.98); }
+  100% { opacity: 0; transform: translateY(22px) scale(0.94); }
 }
 
 @keyframes victoryPop {
