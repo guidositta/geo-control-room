@@ -60,6 +60,29 @@ input {
   cursor: grabbing;
 }
 
+.arcgis-map-view {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.arcgis-mode .tile-layer,
+.arcgis-mode .marker,
+.arcgis-mode .device-marker,
+.arcgis-mode .scale,
+.arcgis-mode .attribution {
+  display: none;
+}
+
+.arcgis-mode .map-vignette {
+  z-index: 2;
+}
+
+.arcgis-mode .map-help,
+.arcgis-mode .map-control {
+  z-index: 8;
+}
+
 .tile-layer {
   position: absolute;
   inset: 0;

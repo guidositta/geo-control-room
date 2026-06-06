@@ -22,6 +22,8 @@ const scoreStreak = document.querySelector("#scoreStreak");
 const languageSelect = document.querySelector("#languageSelect");
 
 const tileBaseUrl = "https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile";
+const portalUrl = "https://sit.lta.it/portal";
+const webMapItemId = "f58c1be903d24a2bb56953ccc83177da";
 const minZoom = 3;
 const maxZoom = 16;
 const translations = {
@@ -424,6 +426,13 @@ let questionAnswered = false;
 let navigationActions = 0;
 let selectedAnswer = "";
 let deviceLocation = null;
+let arcgisView = null;
+let ArcGISGraphic = null;
+let ArcGISPoint = null;
+let targetGraphic = null;
+let deviceGraphic = null;
+let interactionActive = false;
+let suppressMapPenalty = false;
 let score = {
   total: 0,
   correct: 0,
@@ -547,6 +556,148 @@ function createOptions(place) {
   return shuffle([place.answer, ...distractors]);
 }
 
+function loadArcGISModules() {
+  return new Promise((resolve, reject) => {
+    if (!window.require) {
+      reject(new Error("ArcGIS Maps SDK not available"));
+      return;
+    }
+
+    window.require([
+      "esri/config",
+      "esri/WebMap",
+      "esri/views/MapView",
+      "esri/Graphic",
+      "esri/geometry/Point",
+      "esri/widgets/ScaleBar"
+    ], (esriConfig, WebMap, MapView, Graphic, Point, ScaleBar) => {
+      resolve({ esriConfig, WebMap, MapView, Graphic, Point, ScaleBar });
+    }, reject);
+  });
+}
+
+async function initArcGISWebMap() {
+  const { esriConfig, WebMap, MapView, Graphic, Point, ScaleBar } = await loadArcGISModules();
+
+  esriConfig.portalUrl = portalUrl;
+  ArcGISGraphic = Graphic;
+  ArcGISPoint = Point;
+
+  const webmap = new WebMap({
+    portalItem: {
+      id: webMapItemId
+    }
+  });
+
+  arcgisView = new MapView({
+    container: "mapView",
+    map: webmap,
+    center: [places[0].center.lon, places[0].center.lat],
+    zoom: places[0].center.zoom,
+    constraints: {
+      minZoom,
+      maxZoom
+    },
+    ui: {
+      components: ["attribution"]
+    }
+  });
+
+  arcgisView.ui.add(new ScaleBar({
+    view: arcgisView,
+    unit: "metric"
+  }), "bottom-left");
+
+  await arcgisView.when();
+  document.body.classList.add("arcgis-mode");
+
+  arcgisView.watch("interacting", (isInteracting) => {
+    if (suppressMapPenalty) {
+      return;
+    }
+
+    if (isInteracting && !interactionActive) {
+      interactionActive = true;
+      applyNavigationPenalty();
+    }
+
+    if (!isInteracting) {
+      interactionActive = false;
+    }
+  });
+}
+
+function createPoint(lon, lat) {
+  return new ArcGISPoint({
+    longitude: lon,
+    latitude: lat,
+    spatialReference: { wkid: 4326 }
+  });
+}
+
+function syncArcGISGraphics() {
+  if (!arcgisView || !currentPlace || !ArcGISGraphic || !ArcGISPoint) {
+    return;
+  }
+
+  if (!targetGraphic) {
+    targetGraphic = new ArcGISGraphic({
+      symbol: {
+        type: "simple-marker",
+        style: "diamond",
+        color: [255, 184, 74, 0.95],
+        size: 18,
+        outline: {
+          color: [8, 13, 16, 1],
+          width: 2
+        }
+      }
+    });
+    arcgisView.graphics.add(targetGraphic);
+  }
+
+  targetGraphic.geometry = createPoint(currentPlace.center.lon, currentPlace.center.lat);
+
+  if (deviceLocation) {
+    if (!deviceGraphic) {
+      deviceGraphic = new ArcGISGraphic({
+        symbol: {
+          type: "simple-marker",
+          style: "circle",
+          color: [56, 215, 190, 0.95],
+          size: 14,
+          outline: {
+            color: [8, 13, 16, 1],
+            width: 2
+          }
+        }
+      });
+      arcgisView.graphics.add(deviceGraphic);
+    }
+
+    deviceGraphic.geometry = createPoint(deviceLocation.lon, deviceLocation.lat);
+  }
+}
+
+function goToArcGISCenter(center, zoom = mapCenter.zoom) {
+  if (!arcgisView) {
+    return;
+  }
+
+  suppressMapPenalty = true;
+  arcgisView.goTo({
+    center: [center.lon, center.lat],
+    zoom
+  }, {
+    duration: 550
+  }).catch(() => {})
+    .finally(() => {
+      window.setTimeout(() => {
+        suppressMapPenalty = false;
+      }, 120);
+    });
+}
+
 function renderChoices() {
   choices.innerHTML = currentOptions
     .map((option) => `
@@ -615,6 +766,12 @@ function updateDeviceMarkerPosition() {
 
 function renderTiles() {
   if (!currentPlace) {
+    return;
+  }
+
+  if (arcgisView) {
+    syncArcGISGraphics();
+    goToArcGISCenter(mapCenter, mapCenter.zoom);
     return;
   }
 
@@ -797,6 +954,7 @@ function centerOnDeviceLocation() {
       };
 
       renderTiles();
+      syncArcGISGraphics();
       applyNavigationPenalty();
       locateButton.disabled = false;
       setResult("waitingTitle", "waitingText", { args: [] }, "waiting");
@@ -1020,6 +1178,10 @@ window.addEventListener("resize", () => {
 });
 
 mapPanel.addEventListener("pointerdown", (event) => {
+  if (arcgisView) {
+    return;
+  }
+
   if (!currentPlace) {
     return;
   }
@@ -1048,6 +1210,10 @@ mapPanel.addEventListener("pointerdown", (event) => {
 });
 
 mapPanel.addEventListener("pointermove", (event) => {
+  if (arcgisView) {
+    return;
+  }
+
   if (activePointers.has(event.pointerId)) {
     activePointers.set(event.pointerId, {
       clientX: event.clientX,
@@ -1088,6 +1254,10 @@ mapPanel.addEventListener("pointermove", (event) => {
 });
 
 function endPan(event) {
+  if (arcgisView) {
+    return;
+  }
+
   activePointers.delete(event.pointerId);
 
   if (pinchState) {
@@ -1124,6 +1294,10 @@ mapPanel.addEventListener("pointercancel", endPan);
 mapPanel.addEventListener("pointerleave", endPan);
 
 mapPanel.addEventListener("touchstart", (event) => {
+  if (arcgisView) {
+    return;
+  }
+
   if (!currentPlace || event.touches.length < 2) {
     return;
   }
@@ -1133,6 +1307,10 @@ mapPanel.addEventListener("touchstart", (event) => {
 }, { passive: false });
 
 mapPanel.addEventListener("touchmove", (event) => {
+  if (arcgisView) {
+    return;
+  }
+
   if (!touchPinchState || event.touches.length < 2) {
     return;
   }
@@ -1142,16 +1320,28 @@ mapPanel.addEventListener("touchmove", (event) => {
 }, { passive: false });
 
 mapPanel.addEventListener("touchend", (event) => {
+  if (arcgisView) {
+    return;
+  }
+
   if (event.touches.length < 2) {
     touchPinchState = null;
   }
 }, { passive: false });
 
 mapPanel.addEventListener("touchcancel", () => {
+  if (arcgisView) {
+    return;
+  }
+
   touchPinchState = null;
 }, { passive: false });
 
 mapPanel.addEventListener("wheel", (event) => {
+  if (arcgisView) {
+    return;
+  }
+
   if (!currentPlace) {
     return;
   }
@@ -1165,4 +1355,10 @@ mapPanel.addEventListener("wheel", (event) => {
 }, { passive: false });
 
 applyTranslations();
-resetGame();
+initArcGISWebMap()
+  .catch(() => {
+    document.body.classList.remove("arcgis-mode");
+  })
+  .finally(() => {
+    resetGame();
+  });

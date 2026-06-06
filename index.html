@@ -8,7 +8,8 @@
   <meta property="og:description" content="Indovina luoghi nel mondo usando una mappa satellitare. Meno navighi, piu punti ottieni.">
   <meta property="og:type" content="website">
   <title>Geo Control Room</title>
-  <link rel="stylesheet" href="styles.css?v=20260605-4">
+  <link rel="stylesheet" href="https://js.arcgis.com/4.33/esri/themes/dark/main.css">
+  <link rel="stylesheet" href="styles.css?v=20260606-1">
 </head>
 <body>
   <div id="answerBurst" class="answer-burst" aria-hidden="true">
@@ -18,6 +19,7 @@
 
   <main class="app-shell" aria-label="Geo Control Room">
     <section class="map-panel" aria-label="Mappa satellitare navigabile" data-i18n-aria-label="mapAria">
+      <div id="mapView" class="arcgis-map-view"></div>
       <div id="tileLayer" class="tile-layer" aria-hidden="true"></div>
       <div class="map-vignette" aria-hidden="true"></div>
       <span class="marker" aria-hidden="true"></span>
@@ -105,6 +107,7 @@
     </aside>
   </main>
 
-  <script src="app.js?v=20260605-4"></script>
+  <script src="https://js.arcgis.com/4.33/"></script>
+  <script src="app.js?v=20260606-1"></script>
 </body>
 </html>
